@@ -10,6 +10,8 @@ A theme pack for ComfyUI that transforms the nodes into the best 2000's aestheti
 - **10 Unique Themes** - From minimal to cyberpunk, find your perfect style
 - **Non-invasive** - Works with all existing nodes and extensions
 - **Manual Color Support** - Right-click any node to set custom colors - manual colors override theme styling
+- **Theme Customizer** - Visual editor to create and modify themes with real-time preview
+- **Export/Import System** - Share your custom themes with others
 - **Execution Glow** - Currently running nodes glow with theme-matched colors
 - **Progress Bar** - Themed progress indicator for nodes like KSampler
 - **Keyboard Shortcuts** - Quick theme switching with Alt+1 through Alt+0
@@ -90,6 +92,105 @@ You can override theme colors for individual nodes:
 
 **Note**: Manually colored nodes will not display theme effects (glass, glow, scanlines) but will still show execution glow when running.
 
+## Theme Customizer
+
+Create and modify themes with the built-in visual editor:
+
+### Opening the Customizer
+- **Right-click on canvas** → **Niutonian Theme** → **"🎨 Customize Theme..."**
+- **Or create new**: **"➕ Create New Theme..."**
+
+### Customizer Features
+
+**Color Controls:**
+- **Node Background** - Main node color
+- **Selected Background** - Color when node is selected
+- **Title Background** - Node header color
+- **Title Text** - Text color in the header
+- **Border Color** - Normal border color
+- **Selected Border** - Border color when selected
+- **Executing Color** - Color when node is running
+- **Glow Color** - Color for glow effects
+- **Shadow Color** - Drop shadow color
+
+**Effect Sliders:**
+- **Shadow Size** (0-50px) - Controls drop shadow blur
+- **Corner Radius** (0-20px) - Controls node roundness
+- **Glow Intensity** (5-50px) - Controls glow effect size
+- **Glass Opacity** (1-20%) - Controls frosted glass overlay intensity
+- **Node Opacity** (10-100%) - Controls node background transparency
+
+**Visual Effects:**
+- **Glass Effect** - Adds frosted glass overlay
+- **Glow Effect** - Adds glow around selected nodes
+- **Scanlines** - Adds cyberpunk-style scanline effect
+
+### Customizer Buttons
+- **Preview** - See changes for 3 seconds before reverting
+- **Save Theme** - Save changes to current theme (or create new if name changed)
+- **Save As Custom** - Create a new theme with a different name
+- **Export** - Download theme as JSON file for sharing
+- **Import** - Load theme from JSON file into customizer
+- **Delete** - Remove custom theme (only for custom themes)
+
+## Export/Import System
+
+Share your custom themes with others or backup your collection:
+
+### Exporting Themes
+
+**Export Single Theme:**
+1. Open theme customizer
+2. Click **"Export"** button
+3. Theme downloads as `ThemeName_theme.json`
+
+**Export All Custom Themes:**
+1. Right-click canvas → **Niutonian Theme** → **"📤 Export All Custom Themes"**
+2. Downloads all your custom themes as `niutonian_custom_themes_X_themes.json`
+
+### Importing Themes
+
+**Import from Menu (Recommended):**
+1. Right-click canvas → **Niutonian Theme** → **"📥 Import Themes..."**
+2. Select theme file (single theme or collection)
+3. Themes are automatically added to your menu
+4. Works with both single themes and theme collections
+
+**Import to Customizer (For Editing):**
+1. Open theme customizer
+2. Click **"Import"** button
+3. Select theme file
+4. Theme loads into customizer for preview/editing
+5. Use "Save Theme" or "Save As Custom" to save permanently
+
+### File Formats
+
+**Single Theme File:**
+```json
+{
+  "version": "1.0",
+  "type": "niutonian_theme",
+  "theme": { /* theme data */ },
+  "exported_at": "2026-01-03T...",
+  "exported_by": "Niutonian Theme Customizer"
+}
+```
+
+**Theme Collection File:**
+```json
+{
+  "version": "1.0", 
+  "type": "niutonian_theme_collection",
+  "themes": {
+    "theme_1": { /* theme data */ },
+    "theme_2": { /* theme data */ }
+  },
+  "theme_count": 2,
+  "exported_at": "2026-01-03T...",
+  "exported_by": "Niutonian Theme Customizer"
+}
+```
+
 ## Theme Customization
 
 Each theme includes:
@@ -103,7 +204,18 @@ Each theme includes:
 
 ## Customization
 
-Edit `js/node_styles.js` to:
+### Using the Theme Customizer (Recommended)
+
+The easiest way to create custom themes is using the built-in visual editor:
+
+1. **Right-click canvas** → **Niutonian Theme** → **"🎨 Customize Theme..."**
+2. **Adjust colors and effects** using the visual controls
+3. **Preview changes** with the Preview button
+4. **Save your theme** with a custom name
+
+### Manual Code Customization
+
+For advanced users, you can also edit `js/node_styles.js` directly:
 
 ### Add Custom Style Packs
 ```javascript
@@ -152,7 +264,9 @@ const NODE_ACCENTS = {
 - `executing_color`: Color when node is running
 - `glass`: Enable glass effect (boolean)
 - `glow`: Enable glow effect for selected nodes (boolean)
-- `scanlines`: Enable scanline effect (boolean)
+- `glow_intensity`: Glow effect blur radius (5-50px)
+- `glass_opacity`: Glass effect transparency (0.01-0.20)
+- `node_opacity`: Node background transparency (0.10-1.0)
 
 ## Contributing
 

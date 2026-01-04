@@ -6,6 +6,33 @@ import { api } from "/scripts/api.js";
 
 const NS = "niutonian_node_styles";
 const STORAGE_KEY = `${NS}.stylePack`;
+const CUSTOM_THEMES_KEY = `${NS}.customThemes`;
+
+// Load custom themes from localStorage
+function loadCustomThemes() {
+  try {
+    const stored = localStorage.getItem(CUSTOM_THEMES_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch(e) {
+    console.warn("[NiutonianNodeStyles] Failed to load custom themes:", e);
+    return {};
+  }
+}
+
+// Save custom themes to localStorage
+function saveCustomThemes(customThemes) {
+  try {
+    localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(customThemes));
+  } catch(e) {
+    console.error("[NiutonianNodeStyles] Failed to save custom themes:", e);
+  }
+}
+
+// Get all themes (built-in + custom)
+function getAllThemes() {
+  const customThemes = loadCustomThemes();
+  return { ...STYLE_PACKS, ...customThemes };
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STYLE PACKS - Only colors and visual effects, no layout changes
@@ -24,6 +51,10 @@ const STYLE_PACKS = {
     shadow_size: 12,
     corner_radius: 8,
     executing_color: "#ee6c4d",
+    glow_color: "#ee6c4d",
+    glow_intensity: 20,
+    glass_opacity: 0.08,
+    node_opacity: 1.0,
   },
   glass: {
     name: "Glassmorphism", 
@@ -38,6 +69,10 @@ const STYLE_PACKS = {
     corner_radius: 16,
     glass: true,
     executing_color: "#00d4ff",
+    glow_color: "#00d4ff",
+    glow_intensity: 25,
+    glass_opacity: 0.12,
+    node_opacity: 0.85,
   },
   neon: {
     name: "Neon Glow",
@@ -52,6 +87,10 @@ const STYLE_PACKS = {
     corner_radius: 4,
     glow: true,
     executing_color: "#39ff14",
+    glow_color: "#ff00ff",
+    glow_intensity: 35,
+    glass_opacity: 0.06,
+    node_opacity: 1.0,
   },
   minimal: {
     name: "Minimal Clean",
@@ -65,6 +104,10 @@ const STYLE_PACKS = {
     shadow_size: 6,
     corner_radius: 4,
     executing_color: "#ffffff",
+    glow_color: "#ffffff",
+    glow_intensity: 15,
+    glass_opacity: 0.04,
+    node_opacity: 1.0,
   },
   ocean: {
     name: "Ocean Deep",
@@ -78,6 +121,10 @@ const STYLE_PACKS = {
     shadow_size: 15,
     corner_radius: 10,
     executing_color: "#61e8e1",
+    glow_color: "#61e8e1",
+    glow_intensity: 22,
+    glass_opacity: 0.10,
+    node_opacity: 1.0,
   },
   sunset: {
     name: "Sunset Warm",
@@ -91,6 +138,10 @@ const STYLE_PACKS = {
     shadow_size: 14,
     corner_radius: 10,
     executing_color: "#ffb347",
+    glow_color: "#ff7b54",
+    glow_intensity: 18,
+    glass_opacity: 0.08,
+    node_opacity: 1.0,
   },
   cyberpunk: {
     name: "Cyberpunk",
@@ -106,6 +157,10 @@ const STYLE_PACKS = {
     glow: true,
     scanlines: true,
     executing_color: "#00ffff",
+    glow_color: "#ff00ff",
+    glow_intensity: 30,
+    glass_opacity: 0.05,
+    node_opacity: 1.0,
   },
   forest: {
     name: "Forest Night",
@@ -119,6 +174,10 @@ const STYLE_PACKS = {
     shadow_size: 14,
     corner_radius: 8,
     executing_color: "#69f0ae",
+    glow_color: "#81c784",
+    glow_intensity: 20,
+    glass_opacity: 0.09,
+    node_opacity: 1.0,
   },
   midnight: {
     name: "Midnight Purple",
@@ -133,6 +192,10 @@ const STYLE_PACKS = {
     corner_radius: 10,
     glow: true,
     executing_color: "#ea80fc",
+    glow_color: "#ce93d8",
+    glow_intensity: 28,
+    glass_opacity: 0.11,
+    node_opacity: 1.0,
   },
   ember: {
     name: "Ember Glow",
@@ -147,6 +210,10 @@ const STYLE_PACKS = {
     corner_radius: 6,
     glow: true,
     executing_color: "#ff9e80",
+    glow_color: "#ff6e40",
+    glow_intensity: 25,
+    glass_opacity: 0.07,
+    node_opacity: 1.0,
   },
 };
 
@@ -188,7 +255,8 @@ function setPackId(id) {
 }
 
 function getPack() {
-  return STYLE_PACKS[getPackId()] || STYLE_PACKS.modern;
+  const allThemes = getAllThemes();
+  return allThemes[getPackId()] || STYLE_PACKS.modern;
 }
 
 
@@ -364,7 +432,8 @@ function applyTheme() {
         ctx.shadowColor = execColor;
         ctx.shadowBlur = pack.shadow_size * 3;
       } else if (pack.glow && selected) {
-        ctx.shadowColor = accent;
+        const glowColor = pack.glow_color || pack.border_selected;
+        ctx.shadowColor = glowColor;
         ctx.shadowBlur = pack.shadow_size * 1.5;
       } else {
         ctx.shadowColor = pack.shadow_color;
@@ -382,12 +451,20 @@ function applyTheme() {
     } else {
       ctx.roundRect(0, fullY, w, fullH, r);
     }
+    
+    // Apply node opacity
+    const nodeOpacity = pack.node_opacity || 1.0;
+    ctx.globalAlpha = nodeOpacity;
+    
     if (isExecuting) {
       ctx.fillStyle = pack.node_selected;
     } else {
       ctx.fillStyle = selected ? pack.node_selected : pack.node_bg;
     }
     ctx.fill();
+    
+    // Reset alpha for other elements
+    ctx.globalAlpha = 1.0;
     
     // Clear shadow for rest
     ctx.shadowColor = "transparent";
@@ -396,9 +473,10 @@ function applyTheme() {
     
     // === GLASS EFFECT ===
     if (pack.glass && !collapsed) {
+      const glassOpacity = pack.glass_opacity || 0.08;
       const grad = ctx.createLinearGradient(0, fullY, 0, fullY + fullH);
-      grad.addColorStop(0, "rgba(255,255,255,0.08)");
-      grad.addColorStop(0.3, "rgba(255,255,255,0.02)");
+      grad.addColorStop(0, `rgba(255,255,255,${glassOpacity})`);
+      grad.addColorStop(0.3, `rgba(255,255,255,${glassOpacity * 0.25})`);
       grad.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = grad;
       ctx.beginPath();
@@ -427,11 +505,13 @@ function applyTheme() {
     
     // === GLOW FOR SELECTED (neon theme) ===
     if (selected && pack.glow && !isExecuting) {
-      ctx.shadowColor = pack.border_selected;
-      ctx.shadowBlur = 20;
+      const glowColor = pack.glow_color || pack.border_selected;
+      const glowIntensity = pack.glow_intensity || 20;
+      ctx.shadowColor = glowColor;
+      ctx.shadowBlur = glowIntensity;
       ctx.beginPath();
       ctx.roundRect(0, fullY, w, collapsed ? titleH : fullH, r);
-      ctx.strokeStyle = pack.border_selected;
+      ctx.strokeStyle = glowColor;
       ctx.lineWidth = 2;
       ctx.stroke();
     }
@@ -513,6 +593,76 @@ function applyTheme() {
     }
   };
   
+  // Also apply theme to group nodes
+  if (LGraphCanvas && LGraphCanvas.prototype.drawGroup) {
+    const originalDrawGroup = LGraphCanvas.prototype.drawGroup;
+    LGraphCanvas.prototype.drawGroup = function(group, ctx) {
+      if (!group) return;
+      
+      const pack = getPack();
+      
+      // Store original group colors
+      const originalColor = group.color;
+      const originalFont = group.font;
+      
+      // Apply theme colors to group
+      if (!group._originalColor) {
+        group._originalColor = group.color;
+      }
+      
+      // Use theme colors for group
+      group.color = pack.node_bg;
+      group.font = `${LiteGraph.NODE_TEXT_SIZE}px Arial`;
+      
+      // Call original draw function
+      const result = originalDrawGroup.call(this, group, ctx);
+      
+      // Draw themed group styling
+      if (group.size && group.pos) {
+        const [x, y] = group.pos;
+        const [w, h] = group.size;
+        const r = Math.min(pack.corner_radius, 12);
+        
+        ctx.save();
+        
+        // Group background with theme colors
+        ctx.globalAlpha = 0.1;
+        ctx.fillStyle = pack.node_selected;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, r);
+        ctx.fill();
+        
+        // Group border
+        ctx.globalAlpha = 0.3;
+        ctx.strokeStyle = pack.border_color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(x + 1, y + 1, w - 2, h - 2, r);
+        ctx.stroke();
+        
+        // Group title background
+        if (group.title) {
+          ctx.globalAlpha = 0.8;
+          ctx.fillStyle = pack.node_title_bg;
+          ctx.beginPath();
+          ctx.roundRect(x, y, w, 30, [r, r, 0, 0]);
+          ctx.fill();
+          
+          // Group title text
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = pack.node_title_color;
+          ctx.font = `bold ${LiteGraph.NODE_TEXT_SIZE + 2}px Arial`;
+          ctx.textAlign = "center";
+          ctx.fillText(group.title, x + w * 0.5, y + 20);
+        }
+        
+        ctx.restore();
+      }
+      
+      return result;
+    };
+  }
+
   console.log("[NiutonianNodeStyles] ✨ Theme applied:", pack.name);
   return true;
 }
@@ -573,25 +723,739 @@ function reapplyTheme() {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// THEME EXPORT/IMPORT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Export theme to JSON file
+function exportTheme(theme, filename) {
+  const exportData = {
+    version: "1.0",
+    type: "niutonian_theme",
+    theme: theme,
+    exported_at: new Date().toISOString(),
+    exported_by: "Niutonian Theme Customizer"
+  };
+
+  const dataStr = JSON.stringify(exportData, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(dataBlob);
+  link.download = filename || `${theme.name.replace(/\s+/g, '_')}_theme.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+}
+
+// Import theme from JSON file
+function importTheme(callback) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.style.display = 'none';
+  
+  input.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importData = JSON.parse(e.target.result);
+        
+        // Validate import data
+        if (!importData.theme && !importData.themes) {
+          alert('Invalid theme file format. No theme data found.');
+          return;
+        }
+        
+        if (!importData.type || (!importData.type.includes('niutonian_theme'))) {
+          alert('Invalid theme file format. Please select a valid Niutonian theme file.');
+          return;
+        }
+        
+        let theme;
+        if (importData.type === 'niutonian_theme_collection') {
+          // For collections, we'll handle this in the callback
+          callback(null, importData);
+        } else {
+          // Single theme
+          theme = importData.theme;
+          
+          // Ensure theme has required properties
+          const requiredProps = ['name', 'node_bg', 'node_selected', 'border_color'];
+          const missingProps = requiredProps.filter(prop => !theme[prop]);
+          if (missingProps.length > 0) {
+            alert(`Invalid theme file. Missing required properties: ${missingProps.join(', ')}`);
+            return;
+          }
+          
+          callback(theme, importData);
+        }
+      } catch (error) {
+        console.error('[NiutonianNodeStyles] JSON parse error:', error);
+        alert('Error reading theme file. Please ensure it\'s a valid JSON file.');
+      }
+    };
+    
+    reader.onerror = () => {
+      alert('Error reading file. Please try again.');
+    };
+    
+    reader.readAsText(file);
+    document.body.removeChild(input);
+  });
+  
+  document.body.appendChild(input);
+  input.click();
+}
+
+// Export all custom themes
+function exportAllCustomThemes() {
+  const customThemes = loadCustomThemes();
+  const themeCount = Object.keys(customThemes).length;
+  
+  if (themeCount === 0) {
+    alert('No custom themes to export. Create some custom themes first!');
+    return;
+  }
+  
+  const exportData = {
+    version: "1.0",
+    type: "niutonian_theme_collection",
+    themes: customThemes,
+    theme_count: themeCount,
+    exported_at: new Date().toISOString(),
+    exported_by: "Niutonian Theme Customizer"
+  };
+
+  const dataStr = JSON.stringify(exportData, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(dataBlob);
+  link.download = `niutonian_custom_themes_${themeCount}_themes.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+  
+  alert(`Exported ${themeCount} custom themes successfully!`);
+}
+
+// Import theme collection
+function importThemeCollection(callback) {
+  importTheme((theme, importData) => {
+    try {
+      if (importData.type === 'niutonian_theme_collection') {
+        // Multiple themes
+        const themes = importData.themes;
+        const themeCount = Object.keys(themes).length;
+        
+        if (confirm(`This file contains ${themeCount} themes. Do you want to import all of them?`)) {
+          const customThemes = loadCustomThemes();
+          let importedCount = 0;
+          let skippedCount = 0;
+          
+          for (const [themeId, themeData] of Object.entries(themes)) {
+            if (customThemes[themeId]) {
+              if (confirm(`Theme "${themeData.name}" already exists. Do you want to overwrite it?`)) {
+                customThemes[themeId] = themeData;
+                importedCount++;
+              } else {
+                skippedCount++;
+              }
+            } else {
+              customThemes[themeId] = themeData;
+              importedCount++;
+            }
+          }
+          
+          saveCustomThemes(customThemes);
+          alert(`Import complete! Imported: ${importedCount}, Skipped: ${skippedCount}`);
+          
+          if (callback) callback();
+        }
+      } else if (importData.type === 'niutonian_theme') {
+        // Single theme - import it directly
+        const customThemes = loadCustomThemes();
+        const themeId = theme.name.toLowerCase().replace(/\s+/g, '_');
+        
+        if (customThemes[themeId] || getAllThemes()[themeId]) {
+          if (confirm(`Theme "${theme.name}" already exists. Do you want to overwrite it?`)) {
+            customThemes[themeId] = theme;
+            saveCustomThemes(customThemes);
+            alert(`Theme "${theme.name}" imported successfully!`);
+            if (callback) callback();
+          }
+        } else {
+          customThemes[themeId] = theme;
+          saveCustomThemes(customThemes);
+          alert(`Theme "${theme.name}" imported successfully!`);
+          if (callback) callback();
+        }
+      } else {
+        alert('Invalid theme file format. Please select a valid Niutonian theme file.');
+      }
+    } catch (error) {
+      console.error('[NiutonianNodeStyles] Import error:', error);
+      alert('Error importing theme. Please check the console for details.');
+    }
+  });
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// THEME CUSTOMIZER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Create theme customizer dialog
+function createThemeCustomizer() {
+  // Remove existing customizer if any
+  const existing = document.getElementById('niutonian-theme-customizer');
+  if (existing) existing.remove();
+
+  const dialog = document.createElement('div');
+  dialog.id = 'niutonian-theme-customizer';
+  dialog.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    max-height: 80vh;
+    background: #2a2a2a;
+    border: 2px solid #555;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    z-index: 10000;
+    font-family: Arial, sans-serif;
+    color: #fff;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  `;
+
+  const currentPack = getPack();
+  const currentPackId = getPackId();
+  const isCustomTheme = !STYLE_PACKS[currentPackId];
+
+  dialog.innerHTML = `
+    <div style="padding: 20px; border-bottom: 1px solid #555; background: #333;">
+      <h2 style="margin: 0; color: #fff; font-size: 18px;">🎨 Theme Customizer</h2>
+      <button id="close-customizer" style="position: absolute; top: 15px; right: 15px; background: #666; border: none; color: #fff; width: 25px; height: 25px; border-radius: 50%; cursor: pointer;">×</button>
+    </div>
+    
+    <div style="padding: 20px; overflow-y: auto; flex: 1;">
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Theme Name:</label>
+        <input type="text" id="theme-name" value="${isCustomTheme ? currentPackId : ''}" placeholder="Enter custom theme name" 
+               style="width: 100%; padding: 8px; background: #444; border: 1px solid #666; color: #fff; border-radius: 4px;">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <div>
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Node Background:</label>
+          <input type="color" id="node-bg" value="${currentPack.node_bg}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+        </div>
+        
+        <div>
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Selected Background:</label>
+          <input type="color" id="node-selected" value="${currentPack.node_selected}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+        </div>
+        
+        <div>
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Title Background:</label>
+          <input type="color" id="node-title-bg" value="${currentPack.node_title_bg}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+        </div>
+        
+        <div>
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Title Text:</label>
+          <input type="color" id="node-title-color" value="${currentPack.node_title_color}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+        </div>
+        
+        <div>
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Border Color:</label>
+          <input type="color" id="border-color" value="${currentPack.border_color}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+        </div>
+        
+        <div>
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Selected Border:</label>
+          <input type="color" id="border-selected" value="${currentPack.border_selected}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+        </div>
+        
+        <div>
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Executing Color:</label>
+          <input type="color" id="executing-color" value="${currentPack.executing_color}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+        </div>
+        
+        <div>
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Glow Color:</label>
+          <input type="color" id="glow-color" value="${currentPack.glow_color || currentPack.border_selected}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+        </div>
+        
+        <div>
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Shadow Color:</label>
+          <input type="color" id="shadow-color" value="${currentPack.shadow_color?.replace(/rgba?\(([^)]+)\)/, (match, values) => {
+            const [r, g, b] = values.split(',').map(v => parseInt(v.trim()));
+            return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+          }) || '#000000'}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+        </div>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Shadow Size: <span id="shadow-size-value">${currentPack.shadow_size}</span>px</label>
+        <input type="range" id="shadow-size" min="0" max="50" value="${currentPack.shadow_size}" 
+               style="width: 100%; accent-color: #007acc;">
+      </div>
+
+      <div style="margin-top: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Corner Radius: <span id="corner-radius-value">${currentPack.corner_radius}</span>px</label>
+        <input type="range" id="corner-radius" min="0" max="20" value="${currentPack.corner_radius}" 
+               style="width: 100%; accent-color: #007acc;">
+      </div>
+
+      <div style="margin-top: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Glow Intensity: <span id="glow-intensity-value">${currentPack.glow_intensity || 20}</span>px</label>
+        <input type="range" id="glow-intensity" min="5" max="50" value="${currentPack.glow_intensity || 20}" 
+               style="width: 100%; accent-color: #007acc;">
+      </div>
+
+      <div style="margin-top: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Glass Opacity: <span id="glass-opacity-value">${Math.round((currentPack.glass_opacity || 0.08) * 100)}</span>%</label>
+        <input type="range" id="glass-opacity" min="1" max="20" value="${Math.round((currentPack.glass_opacity || 0.08) * 100)}" 
+               style="width: 100%; accent-color: #007acc;">
+      </div>
+
+      <div style="margin-top: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Node Opacity: <span id="node-opacity-value">${Math.round((currentPack.node_opacity || 1.0) * 100)}</span>%</label>
+        <input type="range" id="node-opacity" min="10" max="100" value="${Math.round((currentPack.node_opacity || 1.0) * 100)}" 
+               style="width: 100%; accent-color: #007acc;">
+      </div>
+
+      <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+        <label style="display: flex; align-items: center; cursor: pointer;">
+          <input type="checkbox" id="glass-effect" ${currentPack.glass ? 'checked' : ''} style="margin-right: 8px;">
+          Glass Effect
+        </label>
+        
+        <label style="display: flex; align-items: center; cursor: pointer;">
+          <input type="checkbox" id="glow-effect" ${currentPack.glow ? 'checked' : ''} style="margin-right: 8px;">
+          Glow Effect
+        </label>
+        
+        <label style="display: flex; align-items: center; cursor: pointer;">
+          <input type="checkbox" id="scanlines-effect" ${currentPack.scanlines ? 'checked' : ''} style="margin-right: 8px;">
+          Scanlines
+        </label>
+      </div>
+    </div>
+
+    <div style="padding: 20px; border-top: 1px solid #555; background: #333; display: flex; gap: 10px; justify-content: space-between;">
+      <div style="display: flex; gap: 8px;">
+        <button id="export-theme" style="padding: 8px 16px; background: #6f42c1; border: none; color: #fff; border-radius: 4px; cursor: pointer; font-size: 13px;">Export</button>
+        <button id="import-theme" style="padding: 8px 16px; background: #fd7e14; border: none; color: #fff; border-radius: 4px; cursor: pointer; font-size: 13px;">Import</button>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button id="preview-theme" style="padding: 8px 16px; background: #007acc; border: none; color: #fff; border-radius: 4px; cursor: pointer; font-size: 13px;">Preview</button>
+        <button id="save-theme" style="padding: 8px 16px; background: #28a745; border: none; color: #fff; border-radius: 4px; cursor: pointer; font-size: 13px;">Save Theme</button>
+        <button id="save-as-theme" style="padding: 8px 16px; background: #17a2b8; border: none; color: #fff; border-radius: 4px; cursor: pointer; font-size: 13px;">Save As Custom</button>
+        <button id="delete-theme" style="padding: 8px 16px; background: #dc3545; border: none; color: #fff; border-radius: 4px; cursor: pointer; font-size: 13px; ${isCustomTheme ? '' : 'display: none;'}">Delete</button>
+        <button id="cancel-customizer" style="padding: 8px 16px; background: #666; border: none; color: #fff; border-radius: 4px; cursor: pointer; font-size: 13px;">Cancel</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(dialog);
+
+  // Add event listeners
+  const shadowSizeSlider = dialog.querySelector('#shadow-size');
+  const shadowSizeValue = dialog.querySelector('#shadow-size-value');
+  const cornerRadiusSlider = dialog.querySelector('#corner-radius');
+  const cornerRadiusValue = dialog.querySelector('#corner-radius-value');
+  const glowIntensitySlider = dialog.querySelector('#glow-intensity');
+  const glowIntensityValue = dialog.querySelector('#glow-intensity-value');
+  const glassOpacitySlider = dialog.querySelector('#glass-opacity');
+  const glassOpacityValue = dialog.querySelector('#glass-opacity-value');
+  const nodeOpacitySlider = dialog.querySelector('#node-opacity');
+  const nodeOpacityValue = dialog.querySelector('#node-opacity-value');
+
+  shadowSizeSlider.addEventListener('input', () => {
+    shadowSizeValue.textContent = shadowSizeSlider.value;
+  });
+
+  cornerRadiusSlider.addEventListener('input', () => {
+    cornerRadiusValue.textContent = cornerRadiusSlider.value;
+  });
+
+  glowIntensitySlider.addEventListener('input', () => {
+    glowIntensityValue.textContent = glowIntensitySlider.value;
+  });
+
+  glassOpacitySlider.addEventListener('input', () => {
+    glassOpacityValue.textContent = glassOpacitySlider.value;
+  });
+
+  nodeOpacitySlider.addEventListener('input', () => {
+    nodeOpacityValue.textContent = nodeOpacitySlider.value;
+  });
+
+  // Export theme
+  dialog.querySelector('#export-theme').addEventListener('click', () => {
+    const currentTheme = getThemeFromDialog(dialog);
+    const themeName = currentTheme.name || currentPack.name || 'Custom Theme';
+    currentTheme.name = themeName;
+    
+    exportTheme(currentTheme);
+    alert(`Theme "${themeName}" exported successfully!`);
+  });
+
+  // Import theme
+  dialog.querySelector('#import-theme').addEventListener('click', () => {
+    importTheme((theme, importData) => {
+      try {
+        if (!theme && importData.type === 'niutonian_theme_collection') {
+          alert('This is a theme collection file. Please use the main menu "Import Themes" option to import collections.');
+          return;
+        }
+        
+        if (!theme) {
+          alert('No theme data found in the file.');
+          return;
+        }
+        
+        // Ask if user wants to load the imported theme into the customizer
+        if (confirm(`Import theme "${theme.name}"? This will replace the current customizer settings.`)) {
+          // Update all the form fields with imported theme data
+          dialog.querySelector('#theme-name').value = theme.name || '';
+          dialog.querySelector('#node-bg').value = theme.node_bg || '#2a2a2a';
+          dialog.querySelector('#node-selected').value = theme.node_selected || '#3a3a3a';
+          dialog.querySelector('#node-title-bg').value = theme.node_title_bg || '#333333';
+          dialog.querySelector('#node-title-color').value = theme.node_title_color || '#ffffff';
+          dialog.querySelector('#border-color').value = theme.border_color || '#555555';
+          dialog.querySelector('#border-selected').value = theme.border_selected || '#007acc';
+          dialog.querySelector('#executing-color').value = theme.executing_color || '#00ff88';
+          dialog.querySelector('#glow-color').value = theme.glow_color || '#007acc';
+          
+          // Handle shadow color conversion
+          const shadowColor = theme.shadow_color || 'rgba(0,0,0,0.5)';
+          let hexColor = '#000000';
+          try {
+            hexColor = shadowColor.replace(/rgba?\(([^)]+)\)/, (match, values) => {
+              const [r, g, b] = values.split(',').map(v => parseInt(v.trim()));
+              return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+            });
+          } catch (e) {
+            console.warn('[NiutonianNodeStyles] Could not parse shadow color:', shadowColor);
+          }
+          dialog.querySelector('#shadow-color').value = hexColor;
+          
+          // Update sliders
+          const shadowSize = theme.shadow_size || 12;
+          dialog.querySelector('#shadow-size').value = shadowSize;
+          dialog.querySelector('#shadow-size-value').textContent = shadowSize;
+          
+          const cornerRadius = theme.corner_radius || 8;
+          dialog.querySelector('#corner-radius').value = cornerRadius;
+          dialog.querySelector('#corner-radius-value').textContent = cornerRadius;
+          
+          const glowIntensity = theme.glow_intensity || 20;
+          dialog.querySelector('#glow-intensity').value = glowIntensity;
+          dialog.querySelector('#glow-intensity-value').textContent = glowIntensity;
+          
+          const glassOpacity = Math.round((theme.glass_opacity || 0.08) * 100);
+          dialog.querySelector('#glass-opacity').value = glassOpacity;
+          dialog.querySelector('#glass-opacity-value').textContent = glassOpacity;
+          
+          const nodeOpacity = Math.round((theme.node_opacity || 1.0) * 100);
+          dialog.querySelector('#node-opacity').value = nodeOpacity;
+          dialog.querySelector('#node-opacity-value').textContent = nodeOpacity;
+          
+          // Update checkboxes
+          dialog.querySelector('#glass-effect').checked = theme.glass || false;
+          dialog.querySelector('#glow-effect').checked = theme.glow || false;
+          dialog.querySelector('#scanlines-effect').checked = theme.scanlines || false;
+          
+          alert(`Theme "${theme.name}" loaded into customizer! You can now preview, modify, or save it.`);
+        }
+      } catch (error) {
+        console.error('[NiutonianNodeStyles] Customizer import error:', error);
+        alert('Error loading theme into customizer. Please check the console for details.');
+      }
+    });
+  });
+
+  // Close dialog
+  function closeDialog() {
+    dialog.remove();
+  }
+
+  dialog.querySelector('#close-customizer').addEventListener('click', closeDialog);
+  dialog.querySelector('#cancel-customizer').addEventListener('click', closeDialog);
+
+  // Preview theme
+  dialog.querySelector('#preview-theme').addEventListener('click', () => {
+    const previewTheme = getThemeFromDialog(dialog);
+    previewThemeTemporarily(previewTheme);
+  });
+
+  // Save theme (overwrite current)
+  dialog.querySelector('#save-theme').addEventListener('click', () => {
+    const themeName = dialog.querySelector('#theme-name').value.trim();
+    if (!themeName) {
+      alert('Please enter a theme name');
+      return;
+    }
+
+    // Check if trying to overwrite a built-in theme
+    if (STYLE_PACKS[currentPackId] && !isCustomTheme) {
+      alert('Cannot overwrite built-in themes. Use "Save As Custom" to create a new theme based on this one.');
+      return;
+    }
+
+    const newTheme = getThemeFromDialog(dialog);
+    newTheme.name = themeName;
+
+    // Save to custom themes
+    const customThemes = loadCustomThemes();
+    const themeId = themeName.toLowerCase().replace(/\s+/g, '_');
+    customThemes[themeId] = newTheme;
+    saveCustomThemes(customThemes);
+
+    // Apply the theme
+    setPackId(themeId);
+    reapplyTheme();
+
+    const action = isCustomTheme ? 'updated' : 'saved';
+    alert(`Theme "${themeName}" ${action} successfully!`);
+    closeDialog();
+  });
+
+  // Save as custom theme (always prompt for new name)
+  dialog.querySelector('#save-as-theme').addEventListener('click', () => {
+    // Suggest a default name based on current theme
+    const currentThemeName = currentPack.name || 'Custom Theme';
+    const suggestedName = isCustomTheme ? 
+      `${currentThemeName} Copy` : 
+      `Custom ${currentThemeName}`;
+    
+    // Create a dialog to get the new theme name
+    const newThemeName = prompt(`Enter a name for the new custom theme:`, suggestedName);
+    if (!newThemeName || !newThemeName.trim()) {
+      return;
+    }
+
+    const themeId = newThemeName.toLowerCase().replace(/\s+/g, '_');
+    const customThemes = loadCustomThemes();
+    const allThemes = getAllThemes();
+
+    // Check if theme name already exists
+    if (allThemes[themeId]) {
+      if (!confirm(`A theme named "${newThemeName}" already exists. Do you want to overwrite it?`)) {
+        return;
+      }
+    }
+
+    const newTheme = getThemeFromDialog(dialog);
+    newTheme.name = newThemeName.trim();
+
+    // Save to custom themes
+    customThemes[themeId] = newTheme;
+    saveCustomThemes(customThemes);
+
+    // Apply the new theme
+    setPackId(themeId);
+    reapplyTheme();
+
+    alert(`Custom theme "${newThemeName}" created and applied successfully!`);
+    closeDialog();
+  });
+
+  // Delete theme
+  const deleteBtn = dialog.querySelector('#delete-theme');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', () => {
+      if (confirm(`Are you sure you want to delete the theme "${currentPack.name}"?`)) {
+        const customThemes = loadCustomThemes();
+        delete customThemes[currentPackId];
+        saveCustomThemes(customThemes);
+
+        // Switch to default theme
+        setPackId('modern');
+        reapplyTheme();
+
+        alert('Theme deleted successfully!');
+        closeDialog();
+      }
+    });
+  }
+
+  return dialog;
+}
+
+// Get theme configuration from dialog inputs
+function getThemeFromDialog(dialog) {
+  const shadowColor = dialog.querySelector('#shadow-color').value;
+  const shadowColorRgba = hexToRgba(shadowColor, 0.5);
+
+  return {
+    name: dialog.querySelector('#theme-name').value.trim(),
+    node_bg: dialog.querySelector('#node-bg').value,
+    node_selected: dialog.querySelector('#node-selected').value,
+    node_title_bg: dialog.querySelector('#node-title-bg').value,
+    node_title_color: dialog.querySelector('#node-title-color').value,
+    border_color: dialog.querySelector('#border-color').value,
+    border_selected: dialog.querySelector('#border-selected').value,
+    executing_color: dialog.querySelector('#executing-color').value,
+    glow_color: dialog.querySelector('#glow-color').value,
+    shadow_color: shadowColorRgba,
+    shadow_size: parseInt(dialog.querySelector('#shadow-size').value),
+    corner_radius: parseInt(dialog.querySelector('#corner-radius').value),
+    glow_intensity: parseInt(dialog.querySelector('#glow-intensity').value),
+    glass_opacity: parseInt(dialog.querySelector('#glass-opacity').value) / 100,
+    node_opacity: parseInt(dialog.querySelector('#node-opacity').value) / 100,
+    glass: dialog.querySelector('#glass-effect').checked,
+    glow: dialog.querySelector('#glow-effect').checked,
+    scanlines: dialog.querySelector('#scanlines-effect').checked,
+  };
+}
+
+// Convert hex color to rgba
+function hexToRgba(hex, alpha = 1) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// Preview theme temporarily
+function previewThemeTemporarily(theme) {
+  // Store current theme
+  const originalPackId = getPackId();
+  
+  // Apply preview theme temporarily
+  const customThemes = loadCustomThemes();
+  customThemes['__preview__'] = theme;
+  saveCustomThemes(customThemes);
+  
+  setPackId('__preview__');
+  reapplyTheme();
+  
+  // Revert after 3 seconds
+  setTimeout(() => {
+    const customThemes = loadCustomThemes();
+    delete customThemes['__preview__'];
+    saveCustomThemes(customThemes);
+    
+    setPackId(originalPackId);
+    reapplyTheme();
+  }, 3000);
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MENU
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function buildMenu() {
   const currentPack = getPackId();
+  const allThemes = getAllThemes();
+  const customThemes = loadCustomThemes();
+  
+  const themeOptions = Object.entries(allThemes).map(([id, pack]) => ({
+    content: `${currentPack === id ? "✓ " : "  "}${pack.name}${!STYLE_PACKS[id] ? " (Custom)" : ""}`,
+    callback: () => {
+      setPackId(id);
+      reapplyTheme();
+      console.log("[NiutonianNodeStyles] Switched to:", pack.name);
+    },
+  }));
+
+  // Add separator and customizer options
+  themeOptions.push(null); // separator
+  themeOptions.push({
+    content: "🎨 Customize Theme...",
+    callback: () => {
+      createThemeCustomizer();
+    },
+  });
+
+  themeOptions.push({
+    content: "➕ Create New Theme...",
+    callback: () => {
+      // Create customizer with default values
+      const defaultTheme = {
+        name: "",
+        node_bg: "#2a2a2a",
+        node_selected: "#3a3a3a",
+        node_title_bg: "#333333",
+        node_title_color: "#ffffff",
+        border_color: "#555555",
+        border_selected: "#007acc",
+        executing_color: "#00ff88",
+        glow_color: "#007acc",
+        shadow_color: "rgba(0,0,0,0.5)",
+        shadow_size: 12,
+        corner_radius: 8,
+        glow_intensity: 20,
+        glass_opacity: 0.08,
+        node_opacity: 1.0,
+        glass: false,
+        glow: false,
+        scanlines: false,
+      };
+      
+      // Temporarily set preview theme
+      const customThemes = loadCustomThemes();
+      customThemes['__new__'] = defaultTheme;
+      saveCustomThemes(customThemes);
+      
+      const originalPackId = getPackId();
+      setPackId('__new__');
+      reapplyTheme();
+      
+      createThemeCustomizer();
+      
+      // Clean up when dialog is closed
+      setTimeout(() => {
+        const customThemes = loadCustomThemes();
+        if (customThemes['__new__']) {
+          delete customThemes['__new__'];
+          saveCustomThemes(customThemes);
+          if (getPackId() === '__new__') {
+            setPackId(originalPackId);
+            reapplyTheme();
+          }
+        }
+      }, 100);
+    },
+  });
+
+  // Add separator and import/export options
+  themeOptions.push(null); // separator
+  
+  themeOptions.push({
+    content: "📤 Export All Custom Themes",
+    callback: () => {
+      exportAllCustomThemes();
+    },
+  });
+
+  themeOptions.push({
+    content: "📥 Import Themes...",
+    callback: () => {
+      importThemeCollection();
+    },
+  });
+
   return [
     null,
     {
       content: "🎨 Niutonian Theme",
       has_submenu: true,
       submenu: {
-        options: Object.entries(STYLE_PACKS).map(([id, pack]) => ({
-          content: `${currentPack === id ? "✓ " : "  "}${pack.name}`,
-          callback: () => {
-            setPackId(id);
-            reapplyTheme();
-            console.log("[NiutonianNodeStyles] Switched to:", pack.name);
-          },
-        })),
+        options: themeOptions,
       },
     },
   ];
