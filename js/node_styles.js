@@ -4,6 +4,9 @@
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
 
+// Import LGraphEventMode for bypass detection
+const LGraphEventMode = globalThis?.LiteGraph?.LGraphEventMode || { BYPASS: 4 };
+
 const NS = "niutonian_node_styles";
 const STORAGE_KEY = `${NS}.stylePack`;
 const CUSTOM_THEMES_KEY = `${NS}.customThemes`;
@@ -55,6 +58,8 @@ const STYLE_PACKS = {
     glow_intensity: 20,
     glass_opacity: 0.08,
     node_opacity: 1.0,
+    bypass_color: "#666666",
+    error_color: "#8b2635",
   },
   glass: {
     name: "Glassmorphism", 
@@ -73,6 +78,8 @@ const STYLE_PACKS = {
     glow_intensity: 25,
     glass_opacity: 0.12,
     node_opacity: 0.85,
+    bypass_color: "#555555",
+    error_color: "#cc4444",
   },
   neon: {
     name: "Neon Glow",
@@ -91,6 +98,8 @@ const STYLE_PACKS = {
     glow_intensity: 35,
     glass_opacity: 0.06,
     node_opacity: 1.0,
+    bypass_color: "#444444",
+    error_color: "#ff1744",
   },
   minimal: {
     name: "Minimal Clean",
@@ -108,6 +117,8 @@ const STYLE_PACKS = {
     glow_intensity: 15,
     glass_opacity: 0.04,
     node_opacity: 1.0,
+    bypass_color: "#777777",
+    error_color: "#d32f2f",
   },
   ocean: {
     name: "Ocean Deep",
@@ -125,6 +136,8 @@ const STYLE_PACKS = {
     glow_intensity: 22,
     glass_opacity: 0.10,
     node_opacity: 1.0,
+    bypass_color: "#2a4a5a",
+    error_color: "#c62828",
   },
   sunset: {
     name: "Sunset Warm",
@@ -142,6 +155,8 @@ const STYLE_PACKS = {
     glow_intensity: 18,
     glass_opacity: 0.08,
     node_opacity: 1.0,
+    bypass_color: "#5a3a2a",
+    error_color: "#d84315",
   },
   cyberpunk: {
     name: "Cyberpunk",
@@ -161,6 +176,8 @@ const STYLE_PACKS = {
     glow_intensity: 30,
     glass_opacity: 0.05,
     node_opacity: 1.0,
+    bypass_color: "#333333",
+    error_color: "#ff073a",
   },
   forest: {
     name: "Forest Night",
@@ -178,6 +195,8 @@ const STYLE_PACKS = {
     glow_intensity: 20,
     glass_opacity: 0.09,
     node_opacity: 1.0,
+    bypass_color: "#4a5a4a",
+    error_color: "#c62828",
   },
   midnight: {
     name: "Midnight Purple",
@@ -196,6 +215,8 @@ const STYLE_PACKS = {
     glow_intensity: 28,
     glass_opacity: 0.11,
     node_opacity: 1.0,
+    bypass_color: "#4a3a5a",
+    error_color: "#ad1457",
   },
   ember: {
     name: "Ember Glow",
@@ -214,6 +235,8 @@ const STYLE_PACKS = {
     glow_intensity: 25,
     glass_opacity: 0.07,
     node_opacity: 1.0,
+    bypass_color: "#5a3a2a",
+    error_color: "#d84315",
   },
 };
 
@@ -456,8 +479,19 @@ function applyTheme() {
     const nodeOpacity = pack.node_opacity || 1.0;
     ctx.globalAlpha = nodeOpacity;
     
+    // Detect if node is bypassed
+    const LGraphEventMode = globalThis?.LiteGraph?.LGraphEventMode || { BYPASS: 4 };
+    const isBypassed = node.mode === LGraphEventMode.BYPASS;
+    
+    // Detect if node has errors
+    const hasErrors = node.has_errors === true;
+    
     if (isExecuting) {
       ctx.fillStyle = pack.node_selected;
+    } else if (hasErrors) {
+      ctx.fillStyle = pack.error_color || "#ff0000";
+    } else if (isBypassed) {
+      ctx.fillStyle = pack.bypass_color || "#666666";
     } else {
       ctx.fillStyle = selected ? pack.node_selected : pack.node_bg;
     }
@@ -996,6 +1030,16 @@ function createThemeCustomizer() {
         </div>
         
         <div>
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Bypass Color:</label>
+          <input type="color" id="bypass-color" value="${currentPack.bypass_color || '#666666'}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+        </div>
+        
+        <div>
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Error Color:</label>
+          <input type="color" id="error-color" value="${currentPack.error_color || '#ff0000'}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+        </div>
+        
+        <div>
           <label style="display: block; margin-bottom: 5px; font-weight: bold;">Shadow Color:</label>
           <input type="color" id="shadow-color" value="${currentPack.shadow_color?.replace(/rgba?\(([^)]+)\)/, (match, values) => {
             const [r, g, b] = values.split(',').map(v => parseInt(v.trim()));
@@ -1137,6 +1181,8 @@ function createThemeCustomizer() {
           dialog.querySelector('#border-selected').value = theme.border_selected || '#007acc';
           dialog.querySelector('#executing-color').value = theme.executing_color || '#00ff88';
           dialog.querySelector('#glow-color').value = theme.glow_color || '#007acc';
+          dialog.querySelector('#bypass-color').value = theme.bypass_color || '#666666';
+          dialog.querySelector('#error-color').value = theme.error_color || '#ff0000';
           
           // Handle shadow color conversion
           const shadowColor = theme.shadow_color || 'rgba(0,0,0,0.5)';
@@ -1309,6 +1355,8 @@ function getThemeFromDialog(dialog) {
     border_selected: dialog.querySelector('#border-selected').value,
     executing_color: dialog.querySelector('#executing-color').value,
     glow_color: dialog.querySelector('#glow-color').value,
+    bypass_color: dialog.querySelector('#bypass-color').value,
+    error_color: dialog.querySelector('#error-color').value,
     shadow_color: shadowColorRgba,
     shadow_size: parseInt(dialog.querySelector('#shadow-size').value),
     corner_radius: parseInt(dialog.querySelector('#corner-radius').value),
@@ -1395,6 +1443,8 @@ function buildMenu() {
         border_selected: "#007acc",
         executing_color: "#00ff88",
         glow_color: "#007acc",
+        bypass_color: "#666666",
+        error_color: "#ff0000",
         shadow_color: "rgba(0,0,0,0.5)",
         shadow_size: 12,
         corner_radius: 8,

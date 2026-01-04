@@ -10,6 +10,7 @@ A theme pack for ComfyUI that transforms the nodes into the best 2000's aestheti
 - **10 Unique Themes** - From minimal to cyberpunk, find your perfect style
 - **Non-invasive** - Works with all existing nodes and extensions
 - **Manual Color Support** - Right-click any node to set custom colors - manual colors override theme styling
+- **Node State Colors** - Distinct colors for bypassed and error nodes with full customization
 - **Theme Customizer** - Visual editor to create and modify themes with real-time preview
 - **Export/Import System** - Share your custom themes with others
 - **Execution Glow** - Currently running nodes glow with theme-matched colors
@@ -92,6 +93,25 @@ You can override theme colors for individual nodes:
 
 **Note**: Manually colored nodes will not display theme effects (glass, glow, scanlines) but will still show execution glow when running.
 
+### Node State Colors
+The theme system automatically applies different colors based on node states:
+
+**Priority Order (highest to lowest):**
+1. **Executing Nodes** - Bright glow with execution color when running
+2. **Error Nodes** - Red/orange tones when nodes have errors (`has_errors: true`)
+3. **Bypassed Nodes** - Muted gray tones when nodes are bypassed
+4. **Selected/Normal** - Standard theme colors for regular operation
+
+**Bypassed Nodes:**
+- Nodes set to bypass mode (right-click → Bypass) display in muted colors
+- Each theme has a custom bypass color that maintains visual hierarchy
+- Bypassed nodes are easily identifiable while preserving the theme aesthetic
+
+**Error Nodes:**
+- Nodes with validation errors or runtime issues display in error colors
+- Each theme includes appropriate red/orange error colors
+- Error state takes priority over bypass state for immediate problem identification
+
 ## Theme Customizer
 
 Create and modify themes with the built-in visual editor:
@@ -111,6 +131,8 @@ Create and modify themes with the built-in visual editor:
 - **Selected Border** - Border color when selected
 - **Executing Color** - Color when node is running
 - **Glow Color** - Color for glow effects
+- **Bypass Color** - Color for bypassed nodes
+- **Error Color** - Color for nodes with errors
 - **Shadow Color** - Drop shadow color
 
 **Effect Sliders:**
@@ -232,6 +254,8 @@ const STYLE_PACKS = {
     shadow_size: 12,
     corner_radius: 8,
     executing_color: "#e94560",
+    bypass_color: "#666666",
+    error_color: "#ff0000",
     glass: false,
     glow: false,
     scanlines: false,
@@ -258,6 +282,8 @@ const NODE_ACCENTS = {
 - `node_title_color`: Title text color
 - `border_color`: Normal border color
 - `border_selected`: Selected border color
+- `bypass_color`: Color for bypassed nodes
+- `error_color`: Color for nodes with errors
 - `shadow_color`: Drop shadow color
 - `shadow_size`: Shadow blur radius
 - `corner_radius`: Border radius for rounded corners
