@@ -294,6 +294,35 @@ const NODE_ACCENTS = {
 - `glass_opacity`: Glass effect transparency (0.01-0.20)
 - `node_opacity`: Node background transparency (0.10-1.0)
 
+## Development & Publishing
+
+### Automated Publishing
+This repository includes automated publishing to the ComfyUI Registry via GitHub Actions. When you update the version in `pyproject.toml` and push to the main branch, a new version is automatically published.
+
+### Version Management
+Use the included version bump script for easy version updates:
+
+```bash
+# Bump patch version (1.2.0 → 1.2.1)
+python scripts/bump_version.py patch
+
+# Bump minor version (1.2.0 → 1.3.0)  
+python scripts/bump_version.py minor
+
+# Bump major version (1.2.0 → 2.0.0)
+python scripts/bump_version.py major
+```
+
+After bumping the version, commit and push to trigger automatic publishing:
+```bash
+git add pyproject.toml
+git commit -m "Bump version to X.X.X"
+git push origin main
+```
+
+### Setup Instructions for Maintainers
+See [.github/SETUP.md](.github/SETUP.md) for detailed setup instructions for the GitHub Action publishing workflow.
+
 ## Contributing
 
 Contributions are welcome! Feel free to:
