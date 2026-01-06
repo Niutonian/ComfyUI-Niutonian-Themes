@@ -1,0 +1,55 @@
+[project]
+name = "comfyui-niutonian-themes"
+description = "A professional theme pack for ComfyUI with 10 unique visual styles, customizable colors, and advanced effects"
+version = "1.2.1"
+license = { text = "MIT" }
+
+authors = [
+    { name = "niutonian", email = "" },
+]
+
+readme = "README.md"
+keywords = [
+    "comfyui",
+    "themes",
+    "ui",
+    "styling",
+    "customization",
+    "visual",
+    "interface",
+    "frontend"
+]
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: JavaScript",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Software Development :: User Interfaces",
+    "Topic :: Artistic Software"
+]
+
+requires-python = ">=3.8"
+
+[project.urls]
+Homepage = "https://github.com/Niutonian/ComfyUI-Niutonian-Themes"
+Repository = "https://github.com/Niutonian/ComfyUI-Niutonian-Themes"
+Issues = "https://github.com/Niutonian/ComfyUI-Niutonian-Themes/issues"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.comfy]
+PublisherId = "@Niutonian"
+DisplayName = "Niutonian Themes"
+Icon = ""
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.js", "*.png", "*.md", "*.json"]
