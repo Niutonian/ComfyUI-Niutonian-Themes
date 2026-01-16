@@ -10,7 +10,7 @@ This repository includes a GitHub Action that automatically publishes your custo
 3. In the left sidebar, click **Secrets and variables** → **Actions**
 4. Click **New repository secret**
 5. Name: `REGISTRY_ACCESS_TOKEN`
-6. Value: `184be226-a615-41ab-aac5-ebdb37911cb7`
+6. Value: `[YOUR_COMFYUI_REGISTRY_TOKEN_HERE]`
 7. Click **Add secret**
 
 ### 2. Verify Branch Configuration
@@ -59,5 +59,5 @@ pip install comfy-cli
 
 # Publish manually
 comfy node publish
-# Enter your API key when prompted: 184be226-a615-41ab-aac5-ebdb37911cb7
+# Enter your API key when prompted
 ```

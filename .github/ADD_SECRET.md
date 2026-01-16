@@ -14,13 +14,8 @@
 4. **Create New Repository Secret**:
    - Click **New repository secret**
    - **Name**: `REGISTRY_ACCESS_TOKEN`
-   - **Secret**: `184be226-a615-41ab-aac5-ebdb37911cb7`
+   - **Secret**: `[YOUR_COMFYUI_REGISTRY_TOKEN_HERE]`
    - Click **Add secret**
-
-## Your API Key
-```
-184be226-a615-41ab-aac5-ebdb37911cb7
-```
 
 ## What Happens Next
 

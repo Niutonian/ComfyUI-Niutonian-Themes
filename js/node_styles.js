@@ -42,25 +42,6 @@ function getAllThemes() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const STYLE_PACKS = {
-  original: {
-    name: "Original ComfyUI",
-    node_bg: "#353535",
-    node_selected: "#4a4a4a", 
-    node_title_bg: "#353535",
-    node_title_color: "#ffffff",
-    border_color: "#666666",
-    border_selected: "#ffffff",
-    shadow_color: "rgba(0,0,0,0.5)",
-    shadow_size: 6,
-    corner_radius: 0,
-    executing_color: "#00ff88",
-    glow_color: "#ffffff",
-    glow_intensity: 10,
-    glass_opacity: 0.0,
-    node_opacity: 1.0,
-    bypass_color: "#666666",
-    error_color: "#ff4444",
-  },
   modern: {
     name: "Modern Dark",
     node_bg: "#1f1f28",
@@ -289,7 +270,7 @@ function getAccent(node) {
 }
 
 function getPackId() {
-  return localStorage.getItem(STORAGE_KEY) || "original";
+  return localStorage.getItem(STORAGE_KEY) || "modern";
 }
 
 function setPackId(id) {
@@ -297,31 +278,8 @@ function setPackId(id) {
 }
 
 function getPack() {
-  const packId = getPackId();
-  if (packId === 'disabled') {
-    // Return a minimal pack that won't interfere with original styling
-    return {
-      name: "Original ComfyUI",
-      node_bg: "#353535",
-      node_selected: "#4a4a4a",
-      node_title_bg: "#353535", 
-      node_title_color: "#ffffff",
-      border_color: "#666666",
-      border_selected: "#ffffff",
-      shadow_color: "rgba(0,0,0,0.5)",
-      shadow_size: 6,
-      corner_radius: 0,
-      executing_color: "#00ff88",
-      glow_color: "#ffffff",
-      glow_intensity: 10,
-      glass_opacity: 0.0,
-      node_opacity: 1.0,
-      bypass_color: "#666666",
-      error_color: "#ff4444",
-    };
-  }
   const allThemes = getAllThemes();
-  return allThemes[packId] || STYLE_PACKS.original;
+  return allThemes[getPackId()] || STYLE_PACKS.modern;
 }
 
 
@@ -330,37 +288,6 @@ function getPack() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 let applied = false;
-let originalLiteGraphDefaults = null;
-
-// Store original LiteGraph defaults for restoration
-function storeOriginalDefaults() {
-  const LiteGraph = globalThis?.LiteGraph;
-  if (!LiteGraph || originalLiteGraphDefaults) return;
-  
-  originalLiteGraphDefaults = {
-    NODE_DEFAULT_COLOR: LiteGraph.NODE_DEFAULT_COLOR,
-    NODE_DEFAULT_BGCOLOR: LiteGraph.NODE_DEFAULT_BGCOLOR,
-    NODE_DEFAULT_BOXCOLOR: LiteGraph.NODE_DEFAULT_BOXCOLOR,
-    NODE_TITLE_COLOR: LiteGraph.NODE_TITLE_COLOR,
-    NODE_SELECTED_TITLE_COLOR: LiteGraph.NODE_SELECTED_TITLE_COLOR,
-    NODE_TEXT_COLOR: LiteGraph.NODE_TEXT_COLOR,
-    WIDGET_BGCOLOR: LiteGraph.WIDGET_BGCOLOR,
-    WIDGET_OUTLINE_COLOR: LiteGraph.WIDGET_OUTLINE_COLOR,
-    WIDGET_TEXT_COLOR: LiteGraph.WIDGET_TEXT_COLOR,
-    WIDGET_SECONDARY_TEXT_COLOR: LiteGraph.WIDGET_SECONDARY_TEXT_COLOR,
-    LINK_COLOR: LiteGraph.LINK_COLOR,
-    EVENT_LINK_COLOR: LiteGraph.EVENT_LINK_COLOR,
-    CONNECTING_LINK_COLOR: LiteGraph.CONNECTING_LINK_COLOR,
-  };
-}
-
-// Restore original LiteGraph defaults
-function restoreOriginalDefaults() {
-  const LiteGraph = globalThis?.LiteGraph;
-  if (!LiteGraph || !originalLiteGraphDefaults) return;
-  
-  Object.assign(LiteGraph, originalLiteGraphDefaults);
-}
 
 function applyTheme() {
   const LiteGraph = globalThis?.LiteGraph;
@@ -370,17 +297,7 @@ function applyTheme() {
   if (!LiteGraph || !LGraphCanvas || applied) return false;
   applied = true;
   
-  // Store original defaults before first modification
-  storeOriginalDefaults();
-  
   const pack = getPack();
-  
-  // Check if theme is disabled (original theme selected)
-  if (getPackId() === 'disabled') {
-    restoreOriginalDefaults();
-    console.log("[NiutonianNodeStyles] ✨ Theme disabled - using original ComfyUI styling");
-    return true;
-  }
   
   // Apply to LiteGraph defaults - this affects all nodes without breaking layout
   LiteGraph.NODE_DEFAULT_COLOR = pack.node_bg;
@@ -1494,31 +1411,14 @@ function buildMenu() {
   const allThemes = getAllThemes();
   const customThemes = loadCustomThemes();
   
-  const themeOptions = [];
-  
-  // Add disable option first
-  themeOptions.push({
-    content: `${currentPack === 'disabled' ? "✓ " : "  "}Disable Theme (Original ComfyUI)`,
+  const themeOptions = Object.entries(allThemes).map(([id, pack]) => ({
+    content: `${currentPack === id ? "✓ " : "  "}${pack.name}${!STYLE_PACKS[id] ? " (Custom)" : ""}`,
     callback: () => {
-      setPackId('disabled');
+      setPackId(id);
       reapplyTheme();
-      console.log("[NiutonianNodeStyles] Theme disabled - using original ComfyUI styling");
+      console.log("[NiutonianNodeStyles] Switched to:", pack.name);
     },
-  });
-  
-  themeOptions.push(null); // separator
-  
-  // Add all themes
-  Object.entries(allThemes).forEach(([id, pack]) => {
-    themeOptions.push({
-      content: `${currentPack === id ? "✓ " : "  "}${pack.name}${!STYLE_PACKS[id] ? " (Custom)" : ""}`,
-      callback: () => {
-        setPackId(id);
-        reapplyTheme();
-        console.log("[NiutonianNodeStyles] Switched to:", pack.name);
-      },
-    });
-  });
+  }));
 
   // Add separator and customizer options
   themeOptions.push(null); // separator
@@ -1632,14 +1532,9 @@ app.registerExtension({
       }
     }, 200);
     
-    // Keyboard shortcuts (Alt+` for disable, Alt+1 through Alt+0 for 10 themes)
+    // Keyboard shortcuts (Alt+1 through Alt+0 for 10 themes)
     document.addEventListener("keydown", (e) => {
-      if (e.altKey && e.key === "`") {
-        // Alt+` (backtick) to disable theme
-        setPackId('disabled');
-        reapplyTheme();
-        e.preventDefault();
-      } else if (e.altKey && e.key >= "0" && e.key <= "9") {
+      if (e.altKey && e.key >= "0" && e.key <= "9") {
         const packIds = Object.keys(STYLE_PACKS);
         // Alt+1 = index 0, Alt+2 = index 1, ..., Alt+0 = index 9
         const index = e.key === "0" ? 9 : parseInt(e.key) - 1;
