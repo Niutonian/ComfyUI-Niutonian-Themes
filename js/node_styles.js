@@ -278,8 +278,80 @@ function setPackId(id) {
 }
 
 function getPack() {
+  const packId = getPackId();
+  // When disabled, return a neutral theme that mimics original ComfyUI
+  if (packId === 'disabled') {
+    return {
+      name: "Disabled",
+      node_bg: "#353535",
+      node_selected: "#666666",
+      node_title_bg: "#353535",
+      node_title_color: "#ffffff",
+      border_color: "#666666",
+      border_selected: "#ffffff",
+      shadow_color: "rgba(0,0,0,0.3)",
+      shadow_size: 4,
+      corner_radius: 0,
+      executing_color: "#00ff00",
+      glow_color: "#ffffff",
+      glow_intensity: 0,
+      glass_opacity: 0,
+      node_opacity: 1.0,
+      bypass_color: "#666666",
+      error_color: "#ff0000",
+      glass: false,
+      glow: false,
+      scanlines: false,
+    };
+  }
   const allThemes = getAllThemes();
-  return allThemes[getPackId()] || STYLE_PACKS.modern;
+  return allThemes[packId] || STYLE_PACKS.modern;
+}
+
+// Get theme for a specific node (checks for per-node override first)
+function getNodePack(node) {
+  // If global theme is disabled, always return disabled theme
+  if (getPackId() === 'disabled') {
+    return getPack();
+  }
+  
+  // Check if node has a per-node theme override
+  if (node && node._niutonianTheme) {
+    const allThemes = getAllThemes();
+    const nodeTheme = allThemes[node._niutonianTheme];
+    if (nodeTheme) {
+      return nodeTheme;
+    }
+  }
+  
+  // Fall back to global theme
+  return getPack();
+}
+
+// Set per-node theme override
+function setNodeTheme(node, themeId) {
+  if (!node) return;
+  
+  if (themeId === null || themeId === 'global') {
+    // Remove per-node override, use global theme
+    delete node._niutonianTheme;
+  } else {
+    node._niutonianTheme = themeId;
+  }
+  
+  // Force redraw
+  node.setDirtyCanvas(true, true);
+  if (app.canvas) {
+    app.canvas.setDirty(true, true);
+  }
+}
+
+// Get the current theme ID for a node (returns 'global' if using global theme)
+function getNodeThemeId(node) {
+  if (node && node._niutonianTheme) {
+    return node._niutonianTheme;
+  }
+  return 'global';
 }
 
 
@@ -345,13 +417,42 @@ function applyTheme() {
         };
       }
     };
+    
+    // Hook into node serialization to save per-node theme
+    const originalSerialize = LGraphNode.prototype.serialize;
+    LGraphNode.prototype.serialize = function() {
+      const data = originalSerialize ? originalSerialize.call(this) : {};
+      // Save per-node theme if set
+      if (this._niutonianTheme) {
+        data._niutonianTheme = this._niutonianTheme;
+      }
+      return data;
+    };
+    
+    // Hook into node configuration to restore per-node theme
+    const originalConfigure = LGraphNode.prototype.configure;
+    LGraphNode.prototype.configure = function(data) {
+      if (originalConfigure) {
+        originalConfigure.call(this, data);
+      }
+      // Restore per-node theme if saved
+      if (data._niutonianTheme) {
+        this._niutonianTheme = data._niutonianTheme;
+      }
+    };
   }
   
   // Override drawTitleBarBackground to NOT draw a separate header
   // This gives a cleaner unified look - the title text will draw on top of our node background
   const originalDrawTitleBarBackground = LGraphNode.prototype.drawTitleBarBackground;
   LGraphNode.prototype.drawTitleBarBackground = function(ctx, options = {}) {
-    const pack = getPack();
+    // If theme is disabled, use original rendering
+    if (getPackId() === 'disabled') {
+      return originalDrawTitleBarBackground.call(this, ctx, options);
+    }
+    
+    // Use per-node theme if set, otherwise global theme
+    const pack = getNodePack(this);
     const accent = getAccent(this);
     const titleH = options.title_height || LiteGraph.NODE_TITLE_HEIGHT || 30;
     const collapsed = this.flags?.collapsed;
@@ -401,7 +502,13 @@ function applyTheme() {
   
   // Override drawNodeShape for custom styling while preserving layout
   LGraphCanvas.prototype.drawNodeShape = function(node, ctx, size, fgcolor, bgcolor, selected, mouse_over) {
-    const pack = getPack();
+    // If theme is disabled, use original rendering
+    if (getPackId() === 'disabled') {
+      return originalDrawNodeShape.call(this, node, ctx, size, fgcolor, bgcolor, selected, mouse_over);
+    }
+    
+    // Use per-node theme if set, otherwise global theme
+    const pack = getNodePack(node);
     const accent = getAccent(node);
     
     // Check if node has manual colors set by user
@@ -631,6 +738,11 @@ function applyTheme() {
   if (LGraphCanvas && LGraphCanvas.prototype.drawGroup) {
     const originalDrawGroup = LGraphCanvas.prototype.drawGroup;
     LGraphCanvas.prototype.drawGroup = function(group, ctx) {
+      // If theme is disabled, use original rendering
+      if (getPackId() === 'disabled') {
+        return originalDrawGroup.call(this, group, ctx);
+      }
+      
       if (!group) return;
       
       const pack = getPack();
@@ -1411,14 +1523,30 @@ function buildMenu() {
   const allThemes = getAllThemes();
   const customThemes = loadCustomThemes();
   
-  const themeOptions = Object.entries(allThemes).map(([id, pack]) => ({
-    content: `${currentPack === id ? "✓ " : "  "}${pack.name}${!STYLE_PACKS[id] ? " (Custom)" : ""}`,
-    callback: () => {
-      setPackId(id);
-      reapplyTheme();
-      console.log("[NiutonianNodeStyles] Switched to:", pack.name);
+  // Start with disable option
+  const themeOptions = [
+    {
+      content: `${currentPack === 'disabled' ? "✓ " : "  "}⏸️ Disable Theme`,
+      callback: () => {
+        setPackId('disabled');
+        reapplyTheme();
+        console.log("[NiutonianNodeStyles] Theme disabled");
+      },
     },
-  }));
+    null, // separator
+  ];
+  
+  // Add all themes
+  Object.entries(allThemes).forEach(([id, pack]) => {
+    themeOptions.push({
+      content: `${currentPack === id ? "✓ " : "  "}${pack.name}${!STYLE_PACKS[id] ? " (Custom)" : ""}`,
+      callback: () => {
+        setPackId(id);
+        reapplyTheme();
+        console.log("[NiutonianNodeStyles] Switched to:", pack.name);
+      },
+    });
+  });
 
   // Add separator and customizer options
   themeOptions.push(null); // separator
@@ -1622,8 +1750,75 @@ app.registerExtension({
         }
       }
     });
+    
+    // Add per-node theme menu to node context menu
+    // This is done through ComfyUI's extension API
+  },
+  
+  // Add per-node theme options to node context menu
+  nodeCreated(node) {
+    // Store original getExtraMenuOptions if it exists
+    const originalGetExtraMenuOptions = node.getExtraMenuOptions;
+    
+    node.getExtraMenuOptions = function(canvas, options) {
+      // Call original if it exists
+      if (originalGetExtraMenuOptions) {
+        originalGetExtraMenuOptions.call(this, canvas, options);
+      }
+      
+      // Don't add theme options if global theme is disabled
+      if (getPackId() === 'disabled') {
+        return;
+      }
+      
+      // Build per-node theme submenu
+      const nodeThemeOptions = buildNodeThemeMenu(this);
+      
+      // Add separator and theme submenu
+      options.push(null); // separator
+      options.push({
+        content: "🎨 Node Theme",
+        has_submenu: true,
+        submenu: {
+          options: nodeThemeOptions,
+        },
+      });
+    };
   },
 });
+
+// Build per-node theme menu options
+function buildNodeThemeMenu(node) {
+  const currentNodeTheme = getNodeThemeId(node);
+  const globalThemeId = getPackId();
+  const allThemes = getAllThemes();
+  
+  const options = [];
+  
+  // Option to use global theme (remove per-node override)
+  options.push({
+    content: `${currentNodeTheme === 'global' ? "✓ " : "  "}🌐 Use Global Theme (${getPack().name})`,
+    callback: () => {
+      setNodeTheme(node, 'global');
+    },
+  });
+  
+  options.push(null); // separator
+  
+  // Add all available themes
+  Object.entries(allThemes).forEach(([id, pack]) => {
+    const isSelected = currentNodeTheme === id;
+    const isCustom = !STYLE_PACKS[id];
+    options.push({
+      content: `${isSelected ? "✓ " : "  "}${pack.name}${isCustom ? " (Custom)" : ""}`,
+      callback: () => {
+        setNodeTheme(node, id);
+      },
+    });
+  });
+  
+  return options;
+}
 
 // Also add to LiteGraph menu
 setTimeout(() => {

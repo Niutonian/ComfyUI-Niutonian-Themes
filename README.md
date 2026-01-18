@@ -8,6 +8,8 @@ A theme pack for ComfyUI that transforms the nodes into the best 2000's aestheti
 ## Features
 
 - **10 Unique Themes** - From minimal to cyberpunk, find your perfect style
+- **Per-Node Themes** - Apply different themes to individual nodes for visual organization
+- **Disable Theme Option** - Instantly revert to original ComfyUI styling with one click or Alt+` shortcut
 - **Non-invasive** - Works with all existing nodes and extensions
 - **Manual Color Support** - Right-click any node to set custom colors - manual colors override theme styling
 - **Node State Colors** - Distinct colors for bypassed and error nodes with full customization
@@ -16,7 +18,7 @@ A theme pack for ComfyUI that transforms the nodes into the best 2000's aestheti
 - **Execution Glow** - Currently running nodes glow with theme-matched colors
 - **Progress Bar** - Themed progress indicator for nodes like KSampler
 - **Keyboard Shortcuts** - Quick theme switching with Alt+1 through Alt+0
-- **Persistent Selection** - Your theme choice is saved automatically
+- **Persistent Selection** - Your theme choices are saved automatically
 
 ## Available Themes
 
@@ -75,12 +77,54 @@ A theme pack for ComfyUI that transforms the nodes into the best 2000's aestheti
 
 ## Usage
 
+### Per-Node Themes (NEW!)
+Apply different themes to individual nodes for better visual organization:
+
+**Setting a Node Theme:**
+1. Right-click on any node
+2. Select **"🎨 Node Theme"** from the context menu
+3. Choose a theme to apply to just that node
+4. The node will use its own theme while other nodes use the global theme
+
+**Reverting to Global Theme:**
+1. Right-click on the node
+2. Select **"🎨 Node Theme"** → **"🌐 Use Global Theme"**
+3. The node will return to using the global theme
+
+**Features:**
+- Each node can have its own independent theme
+- Per-node themes are **saved with your workflow** - they persist when you save and reload
+- Mix and match themes to visually organize your workflow (e.g., use Ocean Deep for input nodes, Ember Glow for processing nodes)
+- The menu shows which theme is currently applied with a ✓ checkmark
+- Per-node themes work alongside the global theme system
+
+**Use Cases:**
+- **Visual Organization**: Use different themes for different stages of your workflow (input, processing, output)
+- **Highlight Important Nodes**: Make critical nodes stand out with a distinct theme
+- **Color Coding**: Group related nodes with the same theme for easier navigation
+- **Workflow Clarity**: Use contrasting themes to separate different processing chains
+
+### Disabling the Theme
+Want to revert to the original ComfyUI appearance? You have multiple options:
+
+**Method 1: Menu (Easiest)**
+1. Right-click on the canvas
+2. Select **Niutonian Theme** → **"⏸️ Disable Theme"**
+3. The theme will be completely disabled, showing original ComfyUI styling
+
+**Method 2: Keyboard Shortcut (Fastest)**
+- Press **Alt + ` (backtick)** to instantly disable the theme
+- The backtick key is usually above Tab, left of the number 1
+
+When disabled, all custom rendering is bypassed and ComfyUI displays with its original default appearance. Your choice is automatically saved and persists across sessions.
+
 ### Switching Themes
 1. Right-click on the canvas to open the context menu
 2. Select **Niutonian Theme**
 3. Choose your preferred theme from the submenu
 
 Or use keyboard shortcuts:
+- **Alt + ` (backtick)**: Disable theme (original ComfyUI)
 - **Alt+1** through **Alt+9**: Select themes 1-9
 - **Alt+0**: Select theme 10 (Ember Glow)
 
@@ -93,14 +137,20 @@ You can override theme colors for individual nodes:
 
 **Note**: Manually colored nodes will not display theme effects (glass, glow, scanlines) but will still show execution glow when running.
 
+**Difference between Manual Colors and Per-Node Themes:**
+- **Manual Colors**: Simple color override, no theme effects, set via the Colors menu
+- **Per-Node Themes**: Full theme with all effects (glass, glow, shadows, etc.), set via the Node Theme menu
+
 ### Node State Colors
 The theme system automatically applies different colors based on node states:
 
-**Priority Order (highest to lowest):**
-1. **Executing Nodes** - Bright glow with execution color when running
-2. **Error Nodes** - Red/orange tones when nodes have errors (`has_errors: true`)
-3. **Bypassed Nodes** - Muted gray tones when nodes are bypassed
-4. **Selected/Normal** - Standard theme colors for regular operation
+**Styling Priority (highest to lowest):**
+1. **Manual Colors** - Colors set via right-click → Colors menu (overrides everything)
+2. **Executing Nodes** - Bright glow with execution color when running
+3. **Error Nodes** - Red/orange tones when nodes have errors (`has_errors: true`)
+4. **Bypassed Nodes** - Muted gray tones when nodes are bypassed
+5. **Per-Node Theme** - Custom theme set via right-click → Node Theme menu
+6. **Global Theme** - The theme selected from the canvas menu
 
 **Bypassed Nodes:**
 - Nodes set to bypass mode (right-click → Bypass) display in muted colors
@@ -111,6 +161,11 @@ The theme system automatically applies different colors based on node states:
 - Nodes with validation errors or runtime issues display in error colors
 - Each theme includes appropriate red/orange error colors
 - Error state takes priority over bypass state for immediate problem identification
+
+**Per-Node Themes:**
+- Apply different themes to individual nodes via right-click → Node Theme
+- Per-node themes are saved with your workflow
+- Great for visual organization and workflow clarity
 
 ## Theme Customizer
 
