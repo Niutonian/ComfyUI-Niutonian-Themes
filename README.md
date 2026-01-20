@@ -4,10 +4,10 @@ A professional theme pack for ComfyUI that transforms your node editor with beau
 
 ![Modern Dark Theme](assets/MODERN_DARK.png)
 
-## ✨ Features
+##  Features
 
 - **10 Unique Themes** - From minimal to cyberpunk, find your perfect style
-- **🎯 Nodes 2.0 Compatible** - Works seamlessly with both Classic canvas rendering and modern Nodes 2.0 (Vue-based DOM rendering)
+- **Nodes 2.0 Compatible** - Works seamlessly with both Classic canvas rendering and modern Nodes 2.0 (Vue-based DOM rendering)
 - **Per-Node Themes** - Apply different themes to individual nodes for visual organization
 - **Disable Theme Option** - Instantly revert to original ComfyUI styling with one click or Alt+` shortcut
 - **Non-invasive** - Works with all existing nodes and extensions
@@ -21,7 +21,7 @@ A professional theme pack for ComfyUI that transforms your node editor with beau
 - **Persistent Selection** - Your theme choices are saved automatically
 - **Automatic Mode Detection** - Automatically applies the right theming method based on your rendering mode
 
-## 🆕 Nodes 2.0 Support
+##  Nodes 2.0 Support
 
 This theme pack fully supports **ComfyUI's Nodes 2.0** (Modern Node Design), the new Vue-based DOM rendering system:
 
@@ -366,35 +366,6 @@ const NODE_ACCENTS = {
 - `glow_intensity`: Glow effect blur radius (5-50px)
 - `glass_opacity`: Glass effect transparency (0.01-0.20)
 - `node_opacity`: Node background transparency (0.10-1.0)
-
-## Development & Publishing
-
-### Automated Publishing
-This repository includes automated publishing to the ComfyUI Registry via GitHub Actions. When you update the version in `pyproject.toml` and push to the main branch, a new version is automatically published.
-
-### Version Management
-Use the included version bump script for easy version updates:
-
-```bash
-# Bump patch version (1.2.0 → 1.2.1)
-python scripts/bump_version.py patch
-
-# Bump minor version (1.2.0 → 1.3.0)  
-python scripts/bump_version.py minor
-
-# Bump major version (1.2.0 → 2.0.0)
-python scripts/bump_version.py major
-```
-
-After bumping the version, commit and push to trigger automatic publishing:
-```bash
-git add pyproject.toml
-git commit -m "Bump version to X.X.X"
-git push origin main
-```
-
-### Setup Instructions for Maintainers
-See [.github/SETUP.md](.github/SETUP.md) for detailed setup instructions for the GitHub Action publishing workflow.
 
 ## Contributing
 
