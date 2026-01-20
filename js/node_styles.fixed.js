@@ -11,82 +11,6 @@ const NS = "niutonian_node_styles";
 const STORAGE_KEY = `${NS}.stylePack`;
 const CUSTOM_THEMES_KEY = `${NS}.customThemes`;
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// COLOR HELPERS (Customizer + Import/Export)
-// - <input type="color"> only accepts #RRGGBB, so we normalize any rgba()/named
-//   colors into hex for UI display.
-// - Internally we keep the original CSS strings (rgba, hex, etc.) for rendering.
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function clampByte(n) {
-  const x = Number.isFinite(n) ? n : 0;
-  return Math.max(0, Math.min(255, Math.round(x)));
-}
-
-function rgbToHex(r, g, b) {
-  return (
-    "#" +
-    [clampByte(r), clampByte(g), clampByte(b)]
-      .map((v) => v.toString(16).padStart(2, "0"))
-      .join("")
-  );
-}
-
-function cssColorToHex(input, fallback = "#000000") {
-  if (!input || typeof input !== "string") return fallback;
-  const s = input.trim();
-  if (/^#([0-9a-fA-F]{6})$/.test(s)) return s;
-  if (/^#([0-9a-fA-F]{3})$/.test(s)) {
-    const m = s.slice(1);
-    return "#" + m.split("").map((c) => c + c).join("");
-  }
-
-  // rgba()/rgb()
-  const rgbMatch = s.match(/^rgba?\(([^)]+)\)$/i);
-  if (rgbMatch) {
-    const parts = rgbMatch[1].split(",").map((p) => p.trim());
-    const r = parseFloat(parts[0]);
-    const g = parseFloat(parts[1]);
-    const b = parseFloat(parts[2]);
-    if ([r, g, b].every((v) => Number.isFinite(v))) return rgbToHex(r, g, b);
-  }
-
-  // Fallback: let the browser resolve named colors / hsl() / etc.
-  try {
-    const tmp = document.createElement("div");
-    tmp.style.color = s;
-    tmp.style.display = "none";
-    document.body.appendChild(tmp);
-    const resolved = getComputedStyle(tmp).color; // "rgb(r,g,b)" or "rgba(r,g,b,a)"
-    document.body.removeChild(tmp);
-    const m = resolved.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-    if (m) return rgbToHex(parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10));
-  } catch (e) {
-    // ignore
-  }
-  return fallback;
-}
-
-function safeThemeIdFromName(name) {
-  const base = String(name || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\s_-]/g, "")
-    .replace(/\s+/g, "_")
-    .replace(/_+/g, "_")
-    .slice(0, 60);
-  return base || `custom_${Date.now()}`;
-}
-
-function safeDownloadName(name) {
-  const base = String(name || "theme")
-    .trim()
-    .replace(/\s+/g, "_")
-    .replace(/[^a-zA-Z0-9._-]/g, "")
-    .slice(0, 80);
-  return base || "theme";
-}
-
 // Load custom themes from localStorage
 function loadCustomThemes() {
   try {
@@ -1226,13 +1150,10 @@ function reapplyTheme() {
 
 // Export theme to JSON file
 function exportTheme(theme, filename) {
-  const themeName = theme?.name || "Custom Theme";
-  const themeId = theme?.theme_id || safeThemeIdFromName(themeName);
   const exportData = {
-    version: "1.1",
+    version: "1.0",
     type: "niutonian_theme",
-    theme_id: themeId,
-    theme: { ...theme, theme_id: themeId },
+    theme: theme,
     exported_at: new Date().toISOString(),
     exported_by: "Niutonian Theme Customizer"
   };
@@ -1242,7 +1163,7 @@ function exportTheme(theme, filename) {
   
   const link = document.createElement('a');
   link.href = URL.createObjectURL(dataBlob);
-  link.download = filename || `${safeDownloadName(themeName)}_theme.json`;
+  link.download = filename || `${theme.name.replace(/\s+/g, '_')}_theme.json`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -1283,10 +1204,6 @@ function importTheme(callback) {
         } else {
           // Single theme
           theme = importData.theme;
-
-          // Carry over theme_id if provided (older files may omit it)
-          const inferredId = importData.theme_id || theme?.theme_id || safeThemeIdFromName(theme?.name);
-          theme = { ...theme, theme_id: inferredId };
           
           // Ensure theme has required properties
           const requiredProps = ['name', 'node_bg', 'node_selected', 'border_color'];
@@ -1326,16 +1243,10 @@ function exportAllCustomThemes() {
     return;
   }
   
-  // Ensure every exported theme carries its id for round-tripping.
-  const normalized = {};
-  for (const [id, t] of Object.entries(customThemes)) {
-    normalized[id] = { ...t, theme_id: t?.theme_id || id };
-  }
-
   const exportData = {
-    version: "1.1",
+    version: "1.0",
     type: "niutonian_theme_collection",
-    themes: normalized,
+    themes: customThemes,
     theme_count: themeCount,
     exported_at: new Date().toISOString(),
     exported_by: "Niutonian Theme Customizer"
@@ -1369,14 +1280,8 @@ function importThemeCollection(callback) {
           let importedCount = 0;
           let skippedCount = 0;
           
-          for (const [rawId, themeDataRaw] of Object.entries(themes)) {
-            const themeId = safeThemeIdFromName(themeDataRaw?.theme_id || rawId || themeDataRaw?.name);
-            const themeData = { ...themeDataRaw, theme_id: themeId };
-
-            // Built-ins live in STYLE_PACKS; treat them like existing.
-            const alreadyExists = !!customThemes[themeId] || !!STYLE_PACKS[themeId];
-
-            if (alreadyExists) {
+          for (const [themeId, themeData] of Object.entries(themes)) {
+            if (customThemes[themeId]) {
               if (confirm(`Theme "${themeData.name}" already exists. Do you want to overwrite it?`)) {
                 customThemes[themeId] = themeData;
                 importedCount++;
@@ -1397,8 +1302,7 @@ function importThemeCollection(callback) {
       } else if (importData.type === 'niutonian_theme') {
         // Single theme - import it directly
         const customThemes = loadCustomThemes();
-        const themeId = safeThemeIdFromName(importData.theme_id || theme?.theme_id || theme?.name);
-        theme = { ...theme, theme_id: themeId };
+        const themeId = theme.name.toLowerCase().replace(/\s+/g, '_');
         
         if (customThemes[themeId] || getAllThemes()[themeId]) {
           if (confirm(`Theme "${theme.name}" already exists. Do you want to overwrite it?`)) {
@@ -1459,21 +1363,6 @@ function createThemeCustomizer() {
   const currentPackId = getPackId();
   const isCustomTheme = !STYLE_PACKS[currentPackId];
 
-  // Normalize any rgba()/named colors to hex for <input type="color">.
-  const ui = {
-    node_bg: cssColorToHex(currentPack.node_bg, "#2a2a2a"),
-    node_selected: cssColorToHex(currentPack.node_selected, "#3a3a3a"),
-    node_title_bg: cssColorToHex(currentPack.node_title_bg, "#333333"),
-    node_title_color: cssColorToHex(currentPack.node_title_color, "#ffffff"),
-    border_color: cssColorToHex(currentPack.border_color, "#555555"),
-    border_selected: cssColorToHex(currentPack.border_selected, "#007acc"),
-    executing_color: cssColorToHex(currentPack.executing_color, "#00ff88"),
-    glow_color: cssColorToHex(currentPack.glow_color || currentPack.border_selected, "#007acc"),
-    bypass_color: cssColorToHex(currentPack.bypass_color || "#666666", "#666666"),
-    error_color: cssColorToHex(currentPack.error_color || "#ff0000", "#ff0000"),
-    shadow_color: cssColorToHex(currentPack.shadow_color || "rgba(0,0,0,0.5)", "#000000"),
-  };
-
   dialog.innerHTML = `
     <div style="padding: 20px; border-bottom: 1px solid #555; background: #333;">
       <h2 style="margin: 0; color: #fff; font-size: 18px;">🎨 Theme Customizer</h2>
@@ -1483,64 +1372,67 @@ function createThemeCustomizer() {
     <div style="padding: 20px; overflow-y: auto; flex: 1;">
       <div style="margin-bottom: 20px;">
         <label style="display: block; margin-bottom: 5px; font-weight: bold;">Theme Name:</label>
-        <input type="text" id="theme-name" value="${isCustomTheme ? (currentPack.name || currentPackId) : (currentPack.name || '')}" placeholder="Enter custom theme name" 
+        <input type="text" id="theme-name" value="${isCustomTheme ? currentPackId : ''}" placeholder="Enter custom theme name" 
                style="width: 100%; padding: 8px; background: #444; border: 1px solid #666; color: #fff; border-radius: 4px;">
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
         <div>
           <label style="display: block; margin-bottom: 5px; font-weight: bold;">Node Background:</label>
-          <input type="color" id="node-bg" value="${ui.node_bg}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+          <input type="color" id="node-bg" value="${currentPack.node_bg}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
         </div>
         
         <div>
           <label style="display: block; margin-bottom: 5px; font-weight: bold;">Selected Background:</label>
-          <input type="color" id="node-selected" value="${ui.node_selected}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+          <input type="color" id="node-selected" value="${currentPack.node_selected}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
         </div>
         
         <div>
           <label style="display: block; margin-bottom: 5px; font-weight: bold;">Title Background:</label>
-          <input type="color" id="node-title-bg" value="${ui.node_title_bg}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+          <input type="color" id="node-title-bg" value="${currentPack.node_title_bg}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
         </div>
         
         <div>
           <label style="display: block; margin-bottom: 5px; font-weight: bold;">Title Text:</label>
-          <input type="color" id="node-title-color" value="${ui.node_title_color}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+          <input type="color" id="node-title-color" value="${currentPack.node_title_color}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
         </div>
         
         <div>
           <label style="display: block; margin-bottom: 5px; font-weight: bold;">Border Color:</label>
-          <input type="color" id="border-color" value="${ui.border_color}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+          <input type="color" id="border-color" value="${currentPack.border_color}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
         </div>
         
         <div>
           <label style="display: block; margin-bottom: 5px; font-weight: bold;">Selected Border:</label>
-          <input type="color" id="border-selected" value="${ui.border_selected}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+          <input type="color" id="border-selected" value="${currentPack.border_selected}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
         </div>
         
         <div>
           <label style="display: block; margin-bottom: 5px; font-weight: bold;">Executing Color:</label>
-          <input type="color" id="executing-color" value="${ui.executing_color}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+          <input type="color" id="executing-color" value="${currentPack.executing_color}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
         </div>
         
         <div>
           <label style="display: block; margin-bottom: 5px; font-weight: bold;">Glow Color:</label>
-          <input type="color" id="glow-color" value="${ui.glow_color}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+          <input type="color" id="glow-color" value="${currentPack.glow_color || currentPack.border_selected}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
         </div>
         
         <div>
           <label style="display: block; margin-bottom: 5px; font-weight: bold;">Bypass Color:</label>
-          <input type="color" id="bypass-color" value="${ui.bypass_color}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+          <input type="color" id="bypass-color" value="${currentPack.bypass_color || '#666666'}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
         </div>
         
         <div>
           <label style="display: block; margin-bottom: 5px; font-weight: bold;">Error Color:</label>
-          <input type="color" id="error-color" value="${ui.error_color}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+          <input type="color" id="error-color" value="${currentPack.error_color || '#ff0000'}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
         </div>
         
         <div>
           <label style="display: block; margin-bottom: 5px; font-weight: bold;">Shadow Color:</label>
-          <input type="color" id="shadow-color" value="${ui.shadow_color}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
+          <input type="color" id="shadow-color" value="${currentPack.shadow_color?.replace(/rgba?\(([^)]+)\)/, (match, values) => {
+            const [r, g, b] = values.split(',').map(v => parseInt(v.trim()));
+            return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+          }) || '#000000'}" style="width: 100%; height: 35px; border: none; border-radius: 4px;">
         </div>
       </div>
 
@@ -1669,19 +1561,29 @@ function createThemeCustomizer() {
         if (confirm(`Import theme "${theme.name}"? This will replace the current customizer settings.`)) {
           // Update all the form fields with imported theme data
           dialog.querySelector('#theme-name').value = theme.name || '';
-          dialog.querySelector('#node-bg').value = cssColorToHex(theme.node_bg || '#2a2a2a', '#2a2a2a');
-          dialog.querySelector('#node-selected').value = cssColorToHex(theme.node_selected || '#3a3a3a', '#3a3a3a');
-          dialog.querySelector('#node-title-bg').value = cssColorToHex(theme.node_title_bg || '#333333', '#333333');
-          dialog.querySelector('#node-title-color').value = cssColorToHex(theme.node_title_color || '#ffffff', '#ffffff');
-          dialog.querySelector('#border-color').value = cssColorToHex(theme.border_color || '#555555', '#555555');
-          dialog.querySelector('#border-selected').value = cssColorToHex(theme.border_selected || '#007acc', '#007acc');
-          dialog.querySelector('#executing-color').value = cssColorToHex(theme.executing_color || '#00ff88', '#00ff88');
-          dialog.querySelector('#glow-color').value = cssColorToHex(theme.glow_color || '#007acc', '#007acc');
-          dialog.querySelector('#bypass-color').value = cssColorToHex(theme.bypass_color || '#666666', '#666666');
-          dialog.querySelector('#error-color').value = cssColorToHex(theme.error_color || '#ff0000', '#ff0000');
+          dialog.querySelector('#node-bg').value = theme.node_bg || '#2a2a2a';
+          dialog.querySelector('#node-selected').value = theme.node_selected || '#3a3a3a';
+          dialog.querySelector('#node-title-bg').value = theme.node_title_bg || '#333333';
+          dialog.querySelector('#node-title-color').value = theme.node_title_color || '#ffffff';
+          dialog.querySelector('#border-color').value = theme.border_color || '#555555';
+          dialog.querySelector('#border-selected').value = theme.border_selected || '#007acc';
+          dialog.querySelector('#executing-color').value = theme.executing_color || '#00ff88';
+          dialog.querySelector('#glow-color').value = theme.glow_color || '#007acc';
+          dialog.querySelector('#bypass-color').value = theme.bypass_color || '#666666';
+          dialog.querySelector('#error-color').value = theme.error_color || '#ff0000';
           
-          // Shadow color conversion (supports rgba(), named colors, etc.)
-          dialog.querySelector('#shadow-color').value = cssColorToHex(theme.shadow_color || 'rgba(0,0,0,0.5)', '#000000');
+          // Handle shadow color conversion
+          const shadowColor = theme.shadow_color || 'rgba(0,0,0,0.5)';
+          let hexColor = '#000000';
+          try {
+            hexColor = shadowColor.replace(/rgba?\(([^)]+)\)/, (match, values) => {
+              const [r, g, b] = values.split(',').map(v => parseInt(v.trim()));
+              return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+            });
+          } catch (e) {
+            console.warn('[NiutonianNodeStyles] Could not parse shadow color:', shadowColor);
+          }
+          dialog.querySelector('#shadow-color').value = hexColor;
           
           // Update sliders
           const shadowSize = theme.shadow_size || 12;

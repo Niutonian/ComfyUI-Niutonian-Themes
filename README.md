@@ -1,24 +1,42 @@
 # ComfyUI-Niutonian-Themes
 
-
-A theme pack for ComfyUI that transforms the nodes into the best 2000's aesthetics styles while preserving full functionality.
+A professional theme pack for ComfyUI that transforms your node editor with beautiful, modern styling while preserving full functionality. **Now with full Nodes 2.0 support!**
 
 ![Modern Dark Theme](assets/MODERN_DARK.png)
 
-## Features
+## ✨ Features
 
 - **10 Unique Themes** - From minimal to cyberpunk, find your perfect style
+- **🎯 Nodes 2.0 Compatible** - Works seamlessly with both Classic canvas rendering and modern Nodes 2.0 (Vue-based DOM rendering)
 - **Per-Node Themes** - Apply different themes to individual nodes for visual organization
 - **Disable Theme Option** - Instantly revert to original ComfyUI styling with one click or Alt+` shortcut
 - **Non-invasive** - Works with all existing nodes and extensions
 - **Manual Color Support** - Right-click any node to set custom colors - manual colors override theme styling
 - **Node State Colors** - Distinct colors for bypassed and error nodes with full customization
 - **Theme Customizer** - Visual editor to create and modify themes with real-time preview
-- **Export/Import System** - Share your custom themes with others
+- **Export/Import System** - Share your custom themes with others (supports rgba colors and named colors)
 - **Execution Glow** - Currently running nodes glow with theme-matched colors
 - **Progress Bar** - Themed progress indicator for nodes like KSampler
 - **Keyboard Shortcuts** - Quick theme switching with Alt+1 through Alt+0
 - **Persistent Selection** - Your theme choices are saved automatically
+- **Automatic Mode Detection** - Automatically applies the right theming method based on your rendering mode
+
+## 🆕 Nodes 2.0 Support
+
+This theme pack fully supports **ComfyUI's Nodes 2.0** (Modern Node Design), the new Vue-based DOM rendering system:
+
+- ✅ **Automatic Detection** - Themes automatically adapt when you enable/disable Nodes 2.0
+- ✅ **All Features Work** - Glass effects, glows, shadows, scanlines, and all visual effects
+- ✅ **Per-Node Themes** - Individual node theming works in both modes
+- ✅ **Seamless Switching** - Switch between Classic and Nodes 2.0 without losing your theme
+- ✅ **CSS-Based Rendering** - Uses modern CSS custom properties for Nodes 2.0
+- ✅ **Canvas Rendering** - Maintains original canvas-based theming for Classic mode
+
+**To enable Nodes 2.0:**
+1. Go to Settings (⚙️)
+2. Find "Modern Node Design (Nodes 2.0)" under Experimental
+3. Toggle it ON
+4. Your themes will automatically work in the new mode!
 
 ## Available Themes
 
